@@ -1,4 +1,4 @@
-# Rust Vectordb CMD
+# Qdrant PDF Uploader
 
 ## Overview
 
