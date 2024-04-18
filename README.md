@@ -22,16 +22,17 @@ This project uses several libraries:
 
 ## Running the Project
 
-Before running the project, you need to start a Qdrant docker container. You can do this by running the following command:
+Before running the project, you should start a Qdrant docker container. You can do this by running the following command:
 
 ```bash
 docker run -p 6333:6333 -p 6334:6334 -e QDRANT__SERVICE__GRPC_PORT="6334" qdrant/qdrant
 ```
 
-After starting the Qdrant docker container, you can run the project using the downloaded binary:
+However, if you forget to start the Qdrant docker container, the project can start a Qdrant docker container for you.
+Run the project using the downloaded binary:
 
 ```bash
-./rust-vectordb-cmd <path_to_pdf> [chunk_size] [--debug] [--collection <collection_name>]
+./qdrant-pdf-uploader <path_to_pdf> [chunk_size] [--debug] [--collection <collection_name>]
 ```
 
 ## Usage Guide
@@ -53,7 +54,7 @@ The tool works in the following steps:
 
 3. It splits the extracted text into chunks of the specified size. For this, it uses the `text-splitter` library in combination with the `tiktoken-rs` library. Specifically, it uses the `cl100k_base` model from `tiktoken-rs` to tokenize the text, and then splits the tokenized text into chunks.
 
-4. It connects to the Qdrant database using the `qdrant-client` library.
+4. It attempts to connect to the Qdrant database using the `qdrant-client` library. If the connection fails, it starts a Qdrant docker container with a command.
 
 5. It checks if a collection with the specified name already exists in the Qdrant database. If the collection exists and the user wants to delete it, the tool deletes the collection. If the collection does not exist or has been deleted, the tool creates a new collection.
 

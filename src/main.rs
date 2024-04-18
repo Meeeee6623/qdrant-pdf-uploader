@@ -78,9 +78,32 @@ async fn main() -> anyhow::Result<()> {
         println!("{:?}", chunks);
     }
 
-    // // Connect to the Qdrant database
-    let client = QdrantClient::from_url("http://localhost:6334").build()?;
-    //
+    use std::process::Command;
+
+    // Attempt to connect to the Qdrant database
+    let mut client = QdrantClient::from_url("http://localhost:6334").build();
+
+    while client.is_err() || client.as_ref().unwrap().list_collections().await.is_err() {
+        println!("Qdrant instance with Grpc not detected. Do you want to start a Qdrant instance? (Y/n)");
+        let mut input = String::new();
+        std::io::stdin().read_line(&mut input)?;
+        if input.trim().to_lowercase() != "n" {
+            println!("Starting Qdrant instance...");
+            let _output = Command::new("docker")
+                .args(&["run", "-d", "-p", "6333:6333", "-p", "6334:6334", "-e", "QDRANT__SERVICE__GRPC_PORT=6334", "qdrant/qdrant"])
+                .output()
+                .expect("Failed to execute command. Make sure Docker is installed and running.");
+            println!("Qdrant instance started! You can access the Qdrant dashboard at http://localhost:6333/dashboard/");
+            client = QdrantClient::from_url("http://localhost:6334").build();
+            // sleep for a second to give the Qdrant instance time to start
+            std::thread::sleep(std::time::Duration::from_millis(1000));
+        } else {
+            return Err(anyhow::anyhow!("Cannot proceed without Qdrant instance"));
+        }
+    }
+
+    let client = client.unwrap();
+
     println!("Connected to Qdrant database");
     println!("Collection name: {}", collection_name);
 
@@ -96,7 +119,7 @@ async fn main() -> anyhow::Result<()> {
     if exists {
         println!("Collection {} already exists", collection_name);
         // prompt user to delete collection
-        println!("Do you want to clear the collection (y), or only add to it (n)? ([Y]/n)");
+        println!("Do you want to clear the collection (y), or only add to it (n)? (Y/n)");
         let mut input = String::new();
         std::io::stdin().read_line(&mut input)?;
         if input.trim().to_lowercase() == "n" {
@@ -159,6 +182,7 @@ async fn main() -> anyhow::Result<()> {
         .upsert_points_batch_blocking(collection_name, None, points.clone(), None, 6)
         .await?;
     println!("Uploaded {} embeddings to Qdrant", points.len());
+    println!("Data uploaded successfully! See it at http://localhost:6333/dashboard/");
 
     Ok(())
 }
